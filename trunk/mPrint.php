@@ -4,7 +4,7 @@
  * @desc mPrint Class File
  *
  * @author Morris Jencen O. Chavez <macinville@gmail.com>
- * @version 0.0.1
+ * @version 0.0.2
  *
  * @desc mPrint prints the desired elements in your HTML page.
  * Check out @link http://www.bennadel.com/blog/1591-Ask-Ben-Print-Part-Of-A-Web-Page-With-jQuery.htm for details.
@@ -17,16 +17,25 @@
  *
  * <?php
  *      $this->widget('ext.mPrint.mPrint', array(
- *           'title' => 'title',
- *           'tooltip' => 'testing',
- *           'text' => 'Print Results',
- *           'element' => '#page',
- *           'exemptions' => array(
+ *           'title' => 'title',        //the title of the document. Defaults to the HTML title
+ *           'tooltip' => 'testing',    //tooltip message of the print icon. Defaults to 'print'
+ *           'text' => 'Print Results', //text which will appear beside the print icon. Defaults to NULL
+ *           'element' => '#page',      //the element to be printed.
+ *           'exceptions' => array(     //the element/s which will be ignored
  *               '.summary',
  *               '.search-form'
- *           )
+ *           ),
+ *           'publishCss' => true       //publish the CSS for the whole page?
  *       ));
  * ?>
+ *
+ * Changelogs:
+ * 0.0.2
+ *  - fixed the bug 'Missing argument 2 for CClientScript::registerCss()' by replacing registerCss with registerCssFile (thanks to joblo)
+ *  - modified the property 'exemptions' to 'exceptions' for a more definitive term (thanks Gustavo)
+ *  - added the property 'publishCss' bool, which will dictate whether to register the CSS file for the whole page (for the benefit of CTRL+P).
+ * 0.0.1
+ *  - initial release
  */
 
 class mPrint extends CWidget {
@@ -66,9 +75,9 @@ class mPrint extends CWidget {
     public $element = '#page';
     
     /**
-     * @desc exemptions array html elements which will be exempted in printing
+     * @desc exceptions array html elements which will be exempted in printing
      */
-    public $exemptions = array();
+    public $exceptions = array();
 
     /**
      * @desc assetsPath string path of its asset files
@@ -80,13 +89,21 @@ class mPrint extends CWidget {
      */
     public $printerIcon;
 
+    /**
+     * @desc publishCss bool whether to register the CSS file for the whole page (for the benefit of CTRL+P).
+     *  Defaults to false.
+     */
+    public $publishCss = false;
+
     public function init() {
         $assets = dirname(__FILE__) .'/'. 'assets';
         $this->assetsPath = Yii::app()->getAssetManager()->publish($assets);
         $this->printerIcon = $this->assetsPath . '/'. 'printer.png';
         Yii::app()->getClientScript()->registerScriptFile($this->assetsPath. '/'.'mPrint.js');
         Yii::app()->clientScript->registerCoreScript('jquery');
-        $asset = Yii::app()->getClientScript()->registercss($this->assetsPath. '/'.$this->css);
+
+        //to publish or not to publish? that is the question
+        $this->publishCss ? Yii::app()->getClientScript()->registerCssFile($this->assetsPath. '/'.$this->css,"print"): '';
     }
 
     public function run() {
@@ -107,7 +124,6 @@ class mPrint extends CWidget {
      * @desc renders the link for printing the page
      */
     private function showPrintLink() {
-		//printer icon from famfamfam.com
         $text = "";
         if (isset($this->text))
             $text = "&nbsp;" . $this->text;
@@ -126,9 +142,9 @@ class mPrint extends CWidget {
             ');
 
         //hide the elements which should not be printed (if any)
-        if (count($this->exemptions)) {
+        if (count($this->exceptions)) {
             $hideElements = "";
-            foreach ($this->exemptions as $index => $exemption)
+            foreach ($this->exceptions as $index => $exemption)
                 $hideElements .= '$("' . $exemption . '").addClass("hide-print");';
             //add the appropriate class which will be printed
             Yii::app()->clientScript->registerScript('hidePrintClass', '
