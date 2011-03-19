@@ -4,7 +4,7 @@
  * @desc mPrint Class File
  *
  * @author Morris Jencen O. Chavez <macinville@gmail.com>
- * @version 0.0.3
+ * @version 0.0.6
  * @license http://www.opensource.org/licenses/mit-license.php MIT license
 
  *
