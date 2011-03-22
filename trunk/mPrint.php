@@ -4,7 +4,7 @@
  * @desc mPrint Class File
  *
  * @author Morris Jencen O. Chavez <macinville@gmail.com>
- * @version 0.0.6
+ * @version 0.0.3
  * @license http://www.opensource.org/licenses/mit-license.php MIT license
 
  *
@@ -25,20 +25,32 @@
  * <?php
  *      $this->widget('ext.mPrint.mPrint', array(
  *           'title' => 'title',        //the title of the document. Defaults to the HTML title
- *           'tooltip' => 'print page results',    //tooltip message of the print icon. Defaults to 'print'
+ *           'tooltip' => 'testing',    //tooltip message of the print icon. Defaults to 'print'
  *           'text' => 'Print Results', //text which will appear beside the print icon. Defaults to NULL
  *           'element' => '#page',      //the element to be printed.
  *           'exceptions' => array(     //the element/s which will be ignored
  *               '.summary',
  *               '.search-form'
  *           ),
- *           'publishCss' => true,       //publish the CSS for the whole page?
- *			 'visible' => Yii::app()->user->checkAccess('print')	//should this be visible to the current user?
- *			 'alt' => 'print'			//text which will appear if image can't be loaded
+ *           'publishCss' => true       //publish the CSS for the whole page?
  *       ));
  * ?>
  *
  * Changelogs:
+ * 1.0
+ *  - added the property 'cssFile' which is intended to replace 'css' so as to avoid confusion for those
+ *      who are used to in cssFile (besides, it is more definitive since it is a property for a css file)
+ *  - added property 'dbgHeight' and 'dbgWidth', which will be the size of the debug portion
+ *  - added the property 'timeOut' which will tell how many seconds before the iframe disappears. This
+ *      will only be usable if debug is set to false
+ *  - added the method mCssFile which will manage what value to use between css and cssFile property
+ *  - made some adjustments with the js
+ * 0.1.0
+ *  - added the variable 'debug' so that the result can be seen and checked first before
+ *      sending it out to the printer
+ *  - enhanced the passsing of parameters to the js by using json_encode function
+ *  - enhanced the js code (added $.fn.print.defaults)
+ *  - fixed some bugs found when using FF
  * 0.0.6
  *  - added the property 'alt' (string), which is the text that will appear if the
  *      image is not available
@@ -81,8 +93,9 @@ class mPrint extends CWidget {
     /**
      * @var string The css file which will be used by the printed document.
      * Default is 'mprint.css'.
+     * @deprecated depracated since 0.1.0. Use $cssFile instead
      */
-    public $css = 'mprint.css';
+    public $css = NULL;
     /**
      * @var string Title of the document to be printed. Defaults to the title
      * of the HTML.
@@ -140,23 +153,57 @@ class mPrint extends CWidget {
      * @since 0.0.6
      */
     public $alt = "";
+    /**
+     * @var bool This will show the document to be printed at the bottom of the
+     * screen instead of printing it out to the printer.
+     * Defaults to false.
+     * @since 0.1.0
+     */
+    public $debug = false;
+    /**
+     * @var string  The variable to be used instead of $css. This variable is used
+     * more often in Yii, and I don't see any benefit for me to unique in this part. ;)
+     * If $css and $cssFile are both given, $cssFile will be preferred. But if they were
+     * both not given, the default css file will be given, which is 'mprint.css'
+     * @since 1.0
+     */
+    public $cssFile = NULL;
 
+    /**
+     * @var sting The width of the debug portion. This will only be used if debug is
+     * set to true
+     * @since 1.0
+     */
+     public $dbgWidth = '100%';
+
+    /**
+     * @var sting The height of the debug portion. This will only be used if debug is
+     * set to true
+     * @since 1.0
+     */
+     public $dbgHeight = '100%';
+
+     /**
+      * @var integer The number of seconds before the frame will be removed. This will only
+      * be used if debug is set to false
+      */
+     public $timeOut = 60;
 
     public function init() {
         $assets = dirname(__FILE__) . '/' . 'assets';
-        $this->assetsPath = Yii::app()->getAssetManager()->publish($assets);
+        $this->assetsPath = Yii::app()->getAssetManager()->publish($assets, false, 0, $this->debug);
         $this->printerIcon = $this->assetsPath . '/' . $this->image;
         Yii::app()->getClientScript()->registerScriptFile($this->assetsPath . '/' . 'mPrint.js');
         Yii::app()->clientScript->registerCoreScript('jquery');
 
         //to publish or not to publish? that is the question
-        $this->publishCss ? Yii::app()->getClientScript()->registerCssFile($this->assetsPath . '/' . $this->css, "print") : '';
+        $this->publishCss ? Yii::app()->getClientScript()->registerCssFile($this->assetsPath . '/' . $this->mCssFile(), "print") : '';
     }
 
     public function run() {
         //only make the effort if the link should be visible, and if there's something to
         // display (like 'text' should be defined if 'showIcon' is false.)
-        if ($this->visible && (strlen(trim($this->text))>0 || $this->showIcon)) {
+        if ($this->visible && (strlen(trim($this->text)) > 0 || $this->showIcon)) {
             //display the print icon
             $this->showPrintLink();
 
@@ -214,13 +261,22 @@ class mPrint extends CWidget {
      * @desc the one calling our js file
      */
     public function mPrint() {
+        $mac = array();
         //set the file name. Defaults to the title of the HTML
-        $mac = (isset($this->title) && strlen($this->title)>0) ?
-                'var documentName = "' . $this->title . '";' :
-                'var documentName = document.title;';
+        if (isset($this->title) && strlen($this->title) > 0)
+            $mac['documentName'] = $this->title;
 
         //give the link to the CSS file to be used by the report
-        $mac .= 'var css="' . $this->assetsPath . '/' . $this->css . '";';
+        $mac['cssFile'] = $this->assetsPath . '/' . $this->mCssFile();
+
+        //tell the script whether to enable the debug mode or not
+        $mac['debug'] = $this->debug;
+        $mac['dbgHeight'] = $this->dbgHeight;
+        $mac['dbgWidth'] = $this->dbgWidth;
+        $mac['dbgWidth'] = $this->dbgWidth;
+        
+        //set the iframe timeout
+        $mac['timeOut'] = $this->timeOut;
 
         //register the script
         Yii::app()->clientScript->registerScript('processPrint', '
@@ -230,9 +286,8 @@ class mPrint extends CWidget {
                 .attr( "href", "javascript:void( 0 )" )
                 .click(
                 function(){
-                    ' . $mac . '
                     // Print the DIV.
-                    $( ".mprint" ).print(documentName,css);
+                    $( ".mprint" ).print(' . json_encode($mac) . ');
 
                     // Cancel click event.
                     return( false );
@@ -249,6 +304,23 @@ class mPrint extends CWidget {
         echo CHtml::css(".hide-print {display: none;}", "print");
         //cursor type for the generated printer link
         echo CHtml::css("#mprint {cursor: 'pointer';}", "screen");
+    }
+
+    /**
+     * @desc Returns the css which should be used to the page to be printed
+     * If no CSS are given, mprint.css will be used. If cssFile is NULL and 'css' has
+     * a value, cssFile will get the value of 'css'. 
+     * @return string   The CSS to be used
+     */
+    public function mCssFile() {
+        if (!isset($this->cssFile)) {   //no cssFile
+            if (isset($this->css)) {
+                $this->css = $this->css;
+            } else {                  //no cssFile and css
+                $this->css = 'mprint.css';
+            }
+        }
+        return $this->css;
     }
 
 }
