@@ -22,7 +22,7 @@
  * 
  * @example
  *
- * <?php
+ *
  *      $this->widget('ext.mPrint.mPrint', array(
  *           'title' => 'title',        //the title of the document. Defaults to the HTML title
  *           'tooltip' => 'testing',    //tooltip message of the print icon. Defaults to 'print'
@@ -34,7 +34,7 @@
  *           ),
  *           'publishCss' => true       //publish the CSS for the whole page?
  *       ));
- * ?>
+ * 
  *
  * Changelogs:
  * 1.0
