@@ -45,6 +45,7 @@
  *      will only be usable if debug is set to false
  *  - added the method mCssFile which will manage what value to use between css and cssFile property
  *  - made some adjustments with the js
+ *  - fixed the code so as to make use of $cssFile variable more effectively (thanks tydeas_dr)
  * 0.1.0
  *  - added the variable 'debug' so that the result can be seen and checked first before
  *      sending it out to the printer
@@ -319,7 +320,9 @@ class mPrint extends CWidget {
             } else {                  //no cssFile and css
                 $this->css = 'mprint.css';
             }
-        }
+        } else {
+			$this->css = $this->cssFile;
+		}
         return $this->css;
     }
 
