@@ -280,7 +280,7 @@ class mPrint extends CWidget {
         $mac['timeOut'] = $this->timeOut;
 
         //register the script
-        Yii::app()->clientScript->registerScript('processPrint', '
+        Yii::app()->clientScript->registerScript('processPrint'.$this->id, '
             $(function(){
                 // Hook up the print link.
                 $( "#mprint" )
