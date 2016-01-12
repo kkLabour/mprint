@@ -1,0 +1,1 @@
+This is another approach to printing a page using Yii. It uses jQuery which I got from http://www.bennadel.com/blog/1591-Ask-Ben-Print-Part-Of-A-Web-Page-With-jQuery.htm.
